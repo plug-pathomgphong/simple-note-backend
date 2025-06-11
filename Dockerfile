@@ -1,16 +1,17 @@
 # Stage 1: Build the NestJS app
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# ติดตั้ง dev deps ด้วย
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install
 
 COPY . .
 RUN npm run build
 
 # Stage 2: Production image
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
