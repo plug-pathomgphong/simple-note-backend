@@ -9,22 +9,42 @@ export class NotesService {
     { id: 2, title: 'Note 2', content: 'Content 2' },
   ]
   create(createNoteDto: CreateNoteDto) {
-    return 'This action adds a new note';
+    const newNote = {
+      id: this.notes.length + 1,
+      title: createNoteDto.title,
+      content: createNoteDto.content,
+    };
+    this.notes.push(newNote);
+    return newNote;
   }
 
   findAll() {
-    return `This action returns all notes`;
+    return this.notes;
   }
 
   findOne(id: number) {
-    return `This action returns a #${id} note`;
+    const note = this.notes.find(note => note.id === id);
+    if (!note) {
+      throw new Error(`Note with id ${id} not found`);
+    }
+    return note;
   }
 
   update(id: number, updateNoteDto: UpdateNoteDto) {
-    return `This action updates a #${id} note`;
+    const noteIndex = this.notes.findIndex(note => note.id === id);
+    if (noteIndex === -1) {
+      throw new Error(`Note with id ${id} not found`);
+    }
+    this.notes[noteIndex] = { ...this.notes[noteIndex], ...updateNoteDto };
+    return this.notes[noteIndex];
   }
 
   remove(id: number) {
-    return `This action removes a #${id} note`;
+    const noteIndex = this.notes.findIndex(note => note.id === id);
+    if (noteIndex === -1) {
+      throw new Error(`Note with id ${id} not found`);
+    }
+    this.notes.splice(noteIndex, 1);
+    return `Note with id ${id} removed successfully`;
   }
 }
