@@ -1,1 +1,4 @@
-export class CreateNoteDto {}
+export class CreateNoteDto {
+  title: string;
+  content: string;
+}
