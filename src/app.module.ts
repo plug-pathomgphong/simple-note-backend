@@ -9,6 +9,7 @@ import { PrismaModule } from './prisma/prisma.module';
   imports: [NotesModule, ConfigModule.forRoot({
     isGlobal: true, // Makes the configuration available globally
     envFilePath: `.env.${process.env.NODE_ENV || 'dev'}`, // Loads environment variables from a specific file based on NODE_ENV
+    ignoreEnvFile: process.env.NODE_ENV === 'production',
   }), PrismaModule],
   controllers: [AppController],
   providers: [AppService],

@@ -3,9 +3,11 @@ services:
   backend:
     build: .
     ports:
-      - '3000:3000'
-    env_file:
-      - .env
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV
+      - PORT
+      - DATABASE_URL
     restart: unless-stopped
     depends_on:
       - db
@@ -13,9 +15,9 @@ services:
     image: postgres:15
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secretpassword
-      POSTGRES_DB: notes_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - '5432:5432'
     volumes:
