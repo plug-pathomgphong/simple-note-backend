@@ -1,50 +1,48 @@
 import { Injectable } from '@nestjs/common';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class NotesService {
-  private notes = [
-    { id: 1, title: 'Note 1', content: 'Content 1' },
-    { id: 2, title: 'Note 2', content: 'Content 2' },
-  ]
-  create(createNoteDto: CreateNoteDto) {
-    const newNote = {
-      id: this.notes.length + 1,
-      title: createNoteDto.title,
-      content: createNoteDto.content,
-    };
-    this.notes.push(newNote);
-    return newNote;
+
+  constructor(private prisma: PrismaService) {}
+  create(data: CreateNoteDto) {
+    return this.prisma.note.create({ data });
   }
 
   findAll() {
-    return this.notes;
+    return this.prisma.note.findMany();
   }
 
   findOne(id: number) {
-    const note = this.notes.find(note => note.id === id);
+    const note = this.prisma.note.findUnique({
+      where: { id },
+    });
     if (!note) {
       throw new Error(`Note with id ${id} not found`);
     }
     return note;
   }
 
-  update(id: number, updateNoteDto: UpdateNoteDto) {
-    const noteIndex = this.notes.findIndex(note => note.id === id);
-    if (noteIndex === -1) {
+  update(id: number, data: UpdateNoteDto) {
+    const note = this.prisma.note.update({
+      where: { id },
+      data,
+    });
+    if (!note) {
       throw new Error(`Note with id ${id} not found`);
     }
-    this.notes[noteIndex] = { ...this.notes[noteIndex], ...updateNoteDto };
-    return this.notes[noteIndex];
+    return note;
   }
 
   remove(id: number) {
-    const noteIndex = this.notes.findIndex(note => note.id === id);
-    if (noteIndex === -1) {
+    const note = this.prisma.note.delete({
+      where: { id },
+    });
+    if (!note) {
       throw new Error(`Note with id ${id} not found`);
     }
-    this.notes.splice(noteIndex, 1);
-    return `Note with id ${id} removed successfully`;
+    return note;
   }
 }
