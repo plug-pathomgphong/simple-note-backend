@@ -1,4 +1,8 @@
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
@@ -26,7 +30,11 @@ export class S3Service {
     });
   }
 
-  async uploadFile(buffer: Buffer, key: string, contentType: string): Promise<string> {
+  async uploadFile(
+    buffer: Buffer,
+    key: string,
+    contentType: string,
+  ): Promise<string> {
     const uploadParams = {
       Bucket: this.bucketName,
       Key: key,
