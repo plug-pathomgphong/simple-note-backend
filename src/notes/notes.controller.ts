@@ -8,7 +8,6 @@ import {
   Delete,
   UploadedFile,
   UseInterceptors,
-  UploadedFiles,
   Query,
   ParseIntPipe,
   DefaultValuePipe,
@@ -47,11 +46,15 @@ export class NotesController {
 
   @Patch(':id')
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
-  update(
+  async update(
     @Param('id') id: string,
     @Body() updateNoteDto: UpdateNoteDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
+    // console.log('updateNoteDto', id, updateNoteDto);
+    // console.log('file', file);
+    // await new Promise((resolve) => setTimeout(resolve, 5000));
+    // return '';
     return this.notesService.update(+id, updateNoteDto, file);
   }
 

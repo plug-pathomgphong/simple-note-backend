@@ -2,11 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  DeleteObjectCommand,
-  PutObjectCommand,
-  S3Client,
-} from '@aws-sdk/client-s3';
 import { S3Service } from '../s3/s3.service';
 
 @Injectable()
@@ -57,8 +52,8 @@ export class NotesService {
     };
   }
 
-  findOne(id: number) {
-    const note = this.prisma.note.findUnique({
+  async findOne(id: number) {
+    const note = await this.prisma.note.findUnique({
       where: { id },
     });
     if (!note) {
