@@ -3,12 +3,13 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 @Injectable()
 export class S3Service {
   private s3: S3Client;
   private bucketName: string;
+  private readonly logger = new Logger(S3Service.name);
 
   constructor() {
     this.bucketName = process.env.S3_BUCKET_NAME as string;
@@ -35,19 +36,27 @@ export class S3Service {
     key: string,
     contentType: string,
   ): Promise<string> {
-    const uploadParams = {
-      Bucket: this.bucketName,
-      Key: key,
-      Body: buffer,
-      ContentType: contentType,
-    };
+    try {
+      const uploadParams = {
+        Bucket: this.bucketName,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+      };
 
-    const response = await this.s3.send(new PutObjectCommand(uploadParams));
-    if (response.$metadata.httpStatusCode !== 200) {
-      throw new Error('Failed to upload file to S3');
+      const response = await this.s3.send(new PutObjectCommand(uploadParams));
+      if (response.$metadata.httpStatusCode !== 200) {
+        throw new Error('Failed to upload file to S3');
+      }
+
+      return `https://${this.bucketName}.s3.${process.env.S3_REGION}.amazonaws.com/${key}`;
+    } catch (error) {
+      this.logger.error(
+        `S3 Upload Error: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
+      throw error;
     }
-
-    return `https://${this.bucketName}.s3.${process.env.S3_REGION}.amazonaws.com/${key}`;
   }
 
   async deleteFile(fileName: string): Promise<void> {
