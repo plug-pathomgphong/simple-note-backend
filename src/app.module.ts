@@ -13,7 +13,6 @@ import { APP_GUARD } from '@nestjs/core';
     NotesModule,
     ConfigModule.forRoot({
       isGlobal: true, // Makes the configuration available globally
-      envFilePath: `.env.${process.env.NODE_ENV || 'dev'}`, // Loads environment variables from a specific file based on NODE_ENV
     }),
     PrismaModule,
     S3Module,
