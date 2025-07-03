@@ -2,21 +2,23 @@ import { Injectable } from '@nestjs/common';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  DeleteObjectCommand,
-  PutObjectCommand,
-  S3Client,
-} from '@aws-sdk/client-s3';
 import { S3Service } from '../s3/s3.service';
 
 @Injectable()
 export class NotesService {
-  constructor(private prisma: PrismaService, private s3Service: S3Service) { }
+  constructor(
+    private prisma: PrismaService,
+    private s3Service: S3Service,
+  ) {}
   async create(data: CreateNoteDto, file?: Express.Multer.File) {
     let attachmentUrl: string | null = null;
     if (file) {
       const fileName = `uploads/${Date.now()}-${file.originalname}`;
-      attachmentUrl = await this.s3Service.uploadFile(file.buffer, fileName, file.mimetype);
+      attachmentUrl = await this.s3Service.uploadFile(
+        file.buffer,
+        fileName,
+        file.mimetype,
+      );
     }
     return this.prisma.note.create({ data: { ...data, attachmentUrl } });
   }
@@ -25,7 +27,11 @@ export class NotesService {
     const skip = (page - 1) * limit;
     const [totalItems, items] = await this.prisma.$transaction([
       this.prisma.note.count(),
-      this.prisma.note.findMany({ orderBy: { createdAt: 'desc' }, skip, take: limit }),
+      this.prisma.note.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
     ]);
     if (totalItems === 0) {
       return [];
@@ -46,8 +52,8 @@ export class NotesService {
     };
   }
 
-  findOne(id: number) {
-    const note = this.prisma.note.findUnique({
+  async findOne(id: number) {
+    const note = await this.prisma.note.findUnique({
       where: { id },
     });
     if (!note) {
@@ -74,7 +80,11 @@ export class NotesService {
 
       // If a new file is provided, upload it to S3
       const fileName = `uploads/${Date.now()}-${file.originalname}`;
-      attachmentUrl = await this.s3Service.uploadFile(file.buffer, fileName, file.mimetype);
+      attachmentUrl = await this.s3Service.uploadFile(
+        file.buffer,
+        fileName,
+        file.mimetype,
+      );
     }
 
     const note = await this.prisma.note.update({
@@ -109,7 +119,6 @@ export class NotesService {
     // Delete the note
     // Note: The Prisma client does not return the deleted record by default.
 
-
-    return this.prisma.note.delete( {where: { id } });
+    return this.prisma.note.delete({ where: { id } });
   }
 }
