@@ -1,0 +1,82 @@
+{
+    "family": "simple-note-api-task",
+    "containerDefinitions": [
+        {
+            "name": "simple-note-api",
+            "image": "581085666585.dkr.ecr.us-east-1.amazonaws.com/simple-note-app:latest",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "name": "simple-note-backend-3000-tcp",
+                    "containerPort": 3000,
+                    "hostPort": 3000,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "PORT",
+                    "value": "3000"
+                },
+                {
+                    "name": "NODE_ENV",
+                    "value": "production"
+                }
+            ],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "secrets": [
+                {
+                    "name": "DATABASE_URL",
+                    "valueFrom": "arn:aws:ssm:us-east-1:581085666585:parameter/simple-note-backend/prod/DATABASE_URL"
+                },
+                {
+                    "name": "S3_ACCESS_KEY_ID",
+                    "valueFrom": "arn:aws:ssm:us-east-1:581085666585:parameter/simple-note-backend/prod/S3_ACCESS_KEY_ID"
+                },
+                {
+                    "name": "S3_BUCKET_NAME",
+                    "valueFrom": "arn:aws:ssm:us-east-1:581085666585:parameter/simple-note-backend/prod/S3_BUCKET_NAME"
+                },
+                {
+                    "name": "S3_REGION",
+                    "valueFrom": "arn:aws:ssm:us-east-1:581085666585:parameter/simple-note-backend/prod/S3_REGION"
+                },
+                {
+                    "name": "S3_SECRET_ACCESS_KEY",
+                    "valueFrom": "arn:aws:ssm:us-east-1:581085666585:parameter/simple-note-backend/prod/S3_SECRET_ACCESS_KEY"
+                }
+            ],
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/simple-note-api-task",
+                    "awslogs-create-group": "true",
+                    "awslogs-region": "us-east-1",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        }
+    ],
+    "taskRoleArn": "arn:aws:iam::581085666585:role/ECSTaskS3Role",
+    "executionRoleArn": "arn:aws:iam::581085666585:role/ecsTaskExecutionRole",
+    "networkMode": "awsvpc",
+    "volumes": [],
+    "placementConstraints": [],
+    "requiresCompatibilities": [
+        "EC2"
+    ],
+    "cpu": "1024",
+    "memory": "1024",
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    },
+    "enableFaultInjection": false
+}
