@@ -45,7 +45,7 @@ jobs:
           image: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }}
 
       - name: Deploy to Amazon ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           cluster: ${{ secrets.ECS_CLUSTER_NAME }}
           service: ${{ secrets.ECS_SERVICE_NAME }}
