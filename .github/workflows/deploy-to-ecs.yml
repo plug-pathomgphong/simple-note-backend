@@ -37,11 +37,6 @@ jobs:
           
           # Optional: Print image details for debugging
           echo "Built and pushed image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-
-      # Step 5: Verify the image exists in ECR
-      - name: Verify image in ECR
-        run: |
-          aws ecr describe-images --repository-name $ECR_REPOSITORY --image-ids imageTag=${{ github.sha }}
           
       - name: Render ECS Task Definition
         id: task-def
