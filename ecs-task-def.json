@@ -3,14 +3,14 @@
     "containerDefinitions": [
         {
             "name": "simple-note-api",
-            "image": "581085666585.dkr.ecr.us-east-1.amazonaws.com/simple-note-app:latest",
+            "image": "581085666585.dkr.ecr.us-east-1.amazonaws.com/simple-note-app:fe8d1c139a51453d6a01655204eb93373b4e98c6",
             "cpu": 0,
             "portMappings": [
                 {
-                    "name": "simple-note-backend-3000-tcp",
                     "containerPort": 3000,
                     "hostPort": 3000,
                     "protocol": "tcp",
+                    "name": "simple-note-backend-3000-tcp",
                     "appProtocol": "http"
                 }
             ],
@@ -25,7 +25,6 @@
                     "value": "production"
                 }
             ],
-            "environmentFiles": [],
             "mountPoints": [],
             "volumesFrom": [],
             "secrets": [
@@ -50,7 +49,6 @@
                     "valueFrom": "arn:aws:ssm:us-east-1:581085666585:parameter/simple-note-backend/prod/S3_SECRET_ACCESS_KEY"
                 }
             ],
-            "ulimits": [],
             "logConfiguration": {
                 "logDriver": "awslogs",
                 "options": {
@@ -58,8 +56,7 @@
                     "awslogs-create-group": "true",
                     "awslogs-region": "us-east-1",
                     "awslogs-stream-prefix": "ecs"
-                },
-                "secretOptions": []
+                }
             },
             "systemControls": []
         }
@@ -69,13 +66,16 @@
     "networkMode": "awsvpc",
     "volumes": [],
     "placementConstraints": [],
+    "compatibilities": [
+        "EC2"
+    ],
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    },
     "requiresCompatibilities": [
         "EC2"
     ],
     "cpu": "1024",
-    "memory": "1024",
-    "runtimePlatform": {
-        "cpuArchitecture": "X86_64",
-        "operatingSystemFamily": "LINUX"
-    }
+    "memory": "1024"
 }
