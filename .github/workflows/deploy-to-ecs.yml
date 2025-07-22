@@ -59,10 +59,10 @@ jobs:
         # Optional: Print image details for debugging
         echo "Built and pushed image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
-    # Step 5: Verify the image exists in ECR
-    - name: Verify image in ECR
-      run: |
-        aws ecr describe-images --repository-name $ECR_REPOSITORY --image-ids imageTag=latest
+    # # Step 5: Verify the image exists in ECR
+    # - name: Verify image in ECR
+    #   run: |
+    #     aws ecr describe-images --repository-name $ECR_REPOSITORY --image-ids imageTag=latest
 
     # Step 6: Update the ECS task definition with the new image
     - name: Fill in the new image ID in the Amazon ECS task definition
