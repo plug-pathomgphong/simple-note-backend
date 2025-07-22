@@ -52,4 +52,12 @@ jobs:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
           wait-for-service-stability: true
           force-new-deployment: true  # Force a fresh deployment
+          timeout: 600
+
+      - name: Verify deployment
+        if: success()
+        run: |
+          echo "Checking service status..."
+          aws ecs describe-services --cluster your-cluster --services your-service --query 'services[0].deployments'
+
 
