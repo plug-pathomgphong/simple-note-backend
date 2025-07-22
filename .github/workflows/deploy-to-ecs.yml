@@ -47,7 +47,7 @@ jobs:
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         # Use commit SHA as unique tag instead of 'latest'
-        IMAGE_TAG: latest
+        IMAGE_TAG: ${{ github.sha }}
       run: |
         # Build a docker container and push it to ECR
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
@@ -62,7 +62,7 @@ jobs:
     # # Step 5: Verify the image exists in ECR
     # - name: Verify image in ECR
     #   run: |
-    #     aws ecr describe-images --repository-name $ECR_REPOSITORY --image-ids imageTag=latest
+    #     aws ecr describe-images --repository-name $ECR_REPOSITORY --image-ids imageTag=${{ github.sha }}
 
     # Step 6: Update the ECS task definition with the new image
     - name: Fill in the new image ID in the Amazon ECS task definition
