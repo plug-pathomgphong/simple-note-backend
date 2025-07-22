@@ -44,15 +44,24 @@ jobs:
           container-name: ${{ secrets.CONTAINER_NAME }}
           image: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }}
 
-      - name: Deploy to Amazon ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      # - name: Deploy to Amazon ECS
+      #   uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      #   with:
+      #     cluster: ${{ secrets.ECS_CLUSTER_NAME }}
+      #     service: ${{ secrets.ECS_SERVICE_NAME }}
+      #     task-definition: ${{ steps.task-def.outputs.task-definition }}
+      #     wait-for-service-stability: true
+      #     force-new-deployment: true  # Force a fresh deployment
+      #     timeout: 600
+          
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
-          cluster: ${{ secrets.ECS_CLUSTER_NAME }}
-          service: ${{ secrets.ECS_SERVICE_NAME }}
           task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ secrets.ECS_SERVICE_NAME }}
+          cluster: ${{ secrets.ECS_CLUSTER_NAME }}
           wait-for-service-stability: true
-          force-new-deployment: true  # Force a fresh deployment
-          timeout: 600
+          wait-for-minutes: 10  # Wait for up to 10 minutes
 
       - name: Verify deployment
         if: success()
