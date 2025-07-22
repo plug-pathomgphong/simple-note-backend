@@ -1,76 +1,113 @@
-name: Manual Deploy to ECS
+name: Deploy to Amazon ECS
 
+# Trigger the workflow on push to main branch
 on:
-  workflow_dispatch:  # 👈 enables "Run workflow" button in the Actions tab
+  push:
+    branches: [ "main" ]
+  # Optional: Allow manual triggering
+  workflow_dispatch:
+
+# Environment variables used throughout the workflow
+env:
+  AWS_REGION: us-east-1                   # Set this to your AWS region
+  ECR_REPOSITORY: simple-note-api         # Set this to your ECR repository name
+  ECS_SERVICE: simple-note-api-service    # Set this to your ECS service name
+  ECS_CLUSTER: simple-note-cluster        # Set this to your ECS cluster name
+  ECS_TASK_DEFINITION: ecs-task-def.json # Path to your task definition file
+  CONTAINER_NAME: simple-note-api         # Container name in your task definition
 
 jobs:
   deploy:
+    name: Deploy to ECS
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    # Step 1: Check out the repository code
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+    # Step 2: Configure AWS credentials
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        # Option 1: Using access keys (less secure)
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+        # Option 2: Using OIDC (more secure)
+        # role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        # aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+    # Step 3: Login to Amazon ECR
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build, tag, and push image to Amazon ECR
-        id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-          IMAGE_TAG: latest
-        run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+    # Step 4: Build, tag, and push image to Amazon ECR
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        # Use commit SHA as unique tag instead of 'latest'
+        IMAGE_TAG: latest
+      run: |
+        # Build a docker container and push it to ECR
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        
+        # Store the image URI for later use
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+        
+        # Optional: Print image details for debugging
+        echo "Built and pushed image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
-           # Store the image URI for later use
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-          
-          # Optional: Print image details for debugging
-          echo "Built and pushed image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-          
-      - name: Render ECS Task Definition
-        id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: ${{ secrets.ECS_TASK_DEFINITION }}
-          container-name: ${{ secrets.CONTAINER_NAME }}
-          image: ${{ steps.build-image.outputs.image }}
+    # Step 5: Verify the image exists in ECR
+    - name: Verify image in ECR
+      run: |
+        aws ecr describe-images --repository-name $ECR_REPOSITORY --image-ids imageTag=latest
 
-      # Step 7: Print the updated task definition for debugging
-      - name: Print updated task definition
-        run: |
-          cat ${{ steps.task-def.outputs.task-definition }}
+    # Step 6: Update the ECS task definition with the new image
+    - name: Fill in the new image ID in the Amazon ECS task definition
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: ${{ env.ECS_TASK_DEFINITION }}
+        container-name: ${{ env.CONTAINER_NAME }}
+        image: ${{ steps.build-image.outputs.image }}
 
-      # - name: Deploy to Amazon ECS
-      #   uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-      #   with:
-      #     cluster: ${{ secrets.ECS_CLUSTER_NAME }}
-      #     service: ${{ secrets.ECS_SERVICE_NAME }}
-      #     task-definition: ${{ steps.task-def.outputs.task-definition }}
-      #     wait-for-service-stability: true
-      #     force-new-deployment: true  # Force a fresh deployment
-      #     timeout: 600
-          
-      # Step 8: Deploy the updated task definition to ECS
-      - name: Deploy Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-        with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: true
-          wait-for-minutes: 15
-          force-new-deployment: true
+    # Step 7: Print the updated task definition for debugging
+    - name: Print updated task definition
+      run: |
+        cat ${{ steps.task-def.outputs.task-definition }}
 
+    # Step 8: Deploy the updated task definition to ECS
+    - name: Deploy Amazon ECS task definition
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true
+        wait-for-minutes: 15
+        force-new-deployment: true
 
+    # Step 9: Verify deployment status
+    - name: Verify deployment
+      if: success()
+      run: |
+        echo "Checking service status..."
+        aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE --query 'services[0].deployments'
 
+    # Step 10: Debug deployment issues if the deployment fails
+    - name: Debug deployment issues
+      if: failure()
+      run: |
+        echo "Checking service events..."
+        aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE --query 'services[0].events[0:5]'
+        
+        echo "Checking pending tasks..."
+        TASKS=$(aws ecs list-tasks --cluster $ECS_CLUSTER --service-name $ECS_SERVICE --desired-status PENDING --query 'taskArns[]' --output text)
+        if [ ! -z "$TASKS" ]; then
+          aws ecs describe-tasks --cluster $ECS_CLUSTER --tasks $TASKS
+        fi
