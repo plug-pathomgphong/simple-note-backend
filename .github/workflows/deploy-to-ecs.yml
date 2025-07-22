@@ -2,19 +2,16 @@ name: Deploy to Amazon ECS
 
 # Trigger the workflow on push to main branch
 on:
-  push:
-    branches: [ "main" ]
-  # Optional: Allow manual triggering
   workflow_dispatch:
 
 # Environment variables used throughout the workflow
 env:
-  AWS_REGION: us-east-1                   # Set this to your AWS region
-  ECR_REPOSITORY: simple-note-api         # Set this to your ECR repository name
-  ECS_SERVICE: simple-note-api-service    # Set this to your ECS service name
-  ECS_CLUSTER: simple-note-cluster        # Set this to your ECS cluster name
-  ECS_TASK_DEFINITION: ecs-task-def.json # Path to your task definition file
-  CONTAINER_NAME: simple-note-api         # Container name in your task definition
+  AWS_REGION: ${{ secrets.AWS_REGION }}  # Set this to your AWS region
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}        # Set this to your ECR repository name
+  ECS_SERVICE: ${{ secrets.ECS_SERVICE }}   # Set this to your ECS service name
+  ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}        # Set this to your ECS cluster name
+  ECS_TASK_DEFINITION: ${{ secrets.ECS_TASK_DEFINITION }} # Path to your task definition file
+  CONTAINER_NAME: ${{ secrets.CONTAINER_NAME }}   # Container name in your task definition
 
 jobs:
   deploy:
