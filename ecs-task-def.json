@@ -3,7 +3,7 @@
     "containerDefinitions": [
         {
             "name": "simple-note-api",
-            "image": "581085666585.dkr.ecr.us-east-1.amazonaws.com/simple-note-app:fe8d1c139a51453d6a01655204eb93373b4e98c6",
+            "image": "581085666585.dkr.ecr.us-east-1.amazonaws.com/simple-note-app:latest",
             "cpu": 0,
             "portMappings": [
                 {
