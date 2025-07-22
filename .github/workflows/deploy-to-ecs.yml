@@ -23,26 +23,38 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build, tag, and push image to Amazon ECR
+        id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          # Build with SHA tag
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          # Also tag as latest
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          # Push both tags
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
+           # Store the image URI for later use
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          
+          # Optional: Print image details for debugging
+          echo "Built and pushed image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+      # Step 5: Verify the image exists in ECR
+      - name: Verify image in ECR
+        run: |
+          aws ecr describe-images --repository-name $ECR_REPOSITORY --image-ids imageTag=${{ github.sha }}
+          
       - name: Render ECS Task Definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: ${{ secrets.ECS_TASK_DEFINITION }}
           container-name: ${{ secrets.CONTAINER_NAME }}
-          image: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      # Step 7: Print the updated task definition for debugging
+      - name: Print updated task definition
+        run: |
+          cat ${{ steps.task-def.outputs.task-definition }}
 
       # - name: Deploy to Amazon ECS
       #   uses: aws-actions/amazon-ecs-deploy-task-definition@v2
@@ -54,19 +66,35 @@ jobs:
       #     force-new-deployment: true  # Force a fresh deployment
       #     timeout: 600
           
+      # Step 8: Deploy the updated task definition to ECS
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ secrets.ECS_SERVICE_NAME }}
-          cluster: ${{ secrets.ECS_CLUSTER_NAME }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
-          wait-for-minutes: 10  # Wait for up to 10 minutes
-
+          wait-for-minutes: 15
+          force-new-deployment: true
+  
+      # Step 9: Verify deployment status
       - name: Verify deployment
         if: success()
         run: |
           echo "Checking service status..."
-          aws ecs describe-services --cluster your-cluster --services your-service --query 'services[0].deployments'
+          aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE --query 'services[0].deployments'
+  
+      # Step 10: Debug deployment issues if the deployment fails
+      - name: Debug deployment issues
+        if: failure()
+        run: |
+          echo "Checking service events..."
+          aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE --query 'services[0].events[0:5]'
+          
+          echo "Checking pending tasks..."
+          TASKS=$(aws ecs list-tasks --cluster $ECS_CLUSTER --service-name $ECS_SERVICE --desired-status PENDING --query 'taskArns[]' --output text)
+          if [ ! -z "$TASKS" ]; then
+            aws ecs describe-tasks --cluster $ECS_CLUSTER --tasks $TASKS
+          fi
 
 
