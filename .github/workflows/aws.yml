@@ -32,8 +32,8 @@ on:
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}  # Set this to your AWS region
   ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}        # Set this to your ECR repository name
-  ECS_SERVICE: ${{ secrets.ECS_SERVICE }}   # Set this to your ECS service name
-  ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}        # Set this to your ECS cluster name
+  ECS_SERVICE: ${{ secrets.ECS_SERVICE_NAME }}   # Set this to your ECS service name
+  ECS_CLUSTER: ${{ secrets.ECS_CLUSTER_NAME }}        # Set this to your ECS cluster name
   ECS_TASK_DEFINITION: ${{ secrets.ECS_TASK_DEFINITION }} # Path to your task definition file
   CONTAINER_NAME: ${{ secrets.CONTAINER_NAME }}   # Container name in your task definition
 
