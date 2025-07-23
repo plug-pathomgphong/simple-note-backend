@@ -86,6 +86,9 @@ jobs:
 
     # Step 9: Verify deployment status
     - name: Verify deployment
+      env:
+        ECS_CLUSTER: ${{ env.ECS_CLUSTER }}
+        ECS_SERVICE: ${{ env.ECS_SERVICE }}
       if: success()
       run: |
         echo "Checking service status..."
@@ -93,6 +96,9 @@ jobs:
 
     # Step 10: Debug deployment issues if the deployment fails
     - name: Debug deployment issues
+      env:
+        ECS_CLUSTER: ${{ env.ECS_CLUSTER }}
+        ECS_SERVICE: ${{ env.ECS_SERVICE }}
       if: failure()
       run: |
         echo "Checking service events..."
