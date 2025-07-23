@@ -86,27 +86,21 @@ jobs:
 
     # Step 9: Verify deployment status
     - name: Verify deployment
-      env:
-        ECS_CLUSTER: ${{ env.ECS_CLUSTER }}
-        ECS_SERVICE: ${{ env.ECS_SERVICE }}
       if: success()
       run: |
         echo "Checking service status..."
-        aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE --query 'services[0].deployments'
+        aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --query 'services[0].deployments'
 
     # Step 10: Debug deployment issues if the deployment fails
     - name: Debug deployment issues
-      env:
-        ECS_CLUSTER: ${{ env.ECS_CLUSTER }}
-        ECS_SERVICE: ${{ env.ECS_SERVICE }}
       if: failure()
       run: |
         echo "Checking service events..."
-        aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE --query 'services[0].events[0:5]'
+        aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --query 'services[0].events[0:5]'
         
         echo "Checking pending tasks..."
-        TASKS=$(aws ecs list-tasks --cluster $ECS_CLUSTER --service-name $ECS_SERVICE --desired-status PENDING --query 'taskArns[]' --output text)
+        TASKS=$(aws ecs list-tasks --cluster ${{ env.ECS_CLUSTER }} --service-name ${{ env.ECS_SERVICE }} --desired-status PENDING --query 'taskArns[]' --output text)
         if [ ! -z "$TASKS" ]; then
-          aws ecs describe-tasks --cluster $ECS_CLUSTER --tasks $TASKS
+          aws ecs describe-tasks --cluster ${{ env.ECS_CLUSTER }} --tasks $TASKS
         fi
 
