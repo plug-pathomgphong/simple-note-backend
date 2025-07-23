@@ -5,6 +5,7 @@
             "name": "simple-note-api",
             "image": "581085666585.dkr.ecr.us-east-1.amazonaws.com/simple-note-app:latest",
             "cpu": 1024,
+            "memoryReservation": 1024,
             "portMappings": [
                 {
                     "containerPort": 3000,
