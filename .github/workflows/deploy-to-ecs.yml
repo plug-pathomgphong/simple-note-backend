@@ -60,9 +60,14 @@ jobs:
         echo "Built and pushed image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
     # Step 5: Verify the image exists in ECR
-    - name: Verify image in ECR
+    - name: Verify deployment
+      if: success()
+      env:
+        CLUSTER: ${{ env.ECS_CLUSTER }}
+        SERVICE: ${{ env.ECS_SERVICE }}
       run: |
-        aws ecr describe-images --repository-name $ECR_REPOSITORY --image-ids imageTag=${{ github.sha }}
+        echo "Checking service status..."
+        aws ecs describe-services --cluster "${CLUSTER}" --services "${SERVICE}" --query 'services[0].deployments'
 
     # Step 6: Update the ECS task definition with the new image
     - name: Fill in the new image ID in the Amazon ECS task definition
