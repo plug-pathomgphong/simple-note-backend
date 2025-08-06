@@ -6,7 +6,7 @@ import { json, urlencoded } from 'express';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors({
-    origin: 'http://simple-note-frontend.s3-website-us-east-1.amazonaws.com',
+    origin:  process.env.NODE_ENV == 'development' ? 'http://localhost:5173' : 'http://simple-note-frontend.s3-website-us-east-1.amazonaws.com',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });

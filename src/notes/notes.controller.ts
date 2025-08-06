@@ -18,13 +18,14 @@ import { UpdateNoteDto } from './dto/update-note.dto';
 import { memoryStorage } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Timeout } from '@nestjs/schedule';
+import { TimeoutInterceptor } from '../common/interceptors/timeout.interceptor';
 
 @Controller('notes')
 export class NotesController {
   constructor(private readonly notesService: NotesService) {}
 
   @Post()
-  @Timeout(10000) // Optional: Set a timeout for the request
+  @UseInterceptors(new TimeoutInterceptor(3000)) 
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   create(
     @Body() createNoteDto: CreateNoteDto,
@@ -34,8 +35,8 @@ export class NotesController {
   }
 
   @Get()
-  @Timeout(3000) // Optional: Set a timeout for the request
-  findAll(
+  @UseInterceptors(new TimeoutInterceptor(3000)) 
+  async findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
   ) {
@@ -48,7 +49,7 @@ export class NotesController {
   }
 
   @Patch(':id')
-  @Timeout(10000) // Optional: Set a timeout for the request
+  @UseInterceptors(new TimeoutInterceptor(10000)) 
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   async update(
     @Param('id') id: string,
