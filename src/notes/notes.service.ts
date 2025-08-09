@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
+import { PaginationDto } from './dto/pagination.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
+import { PaginatedResponse } from './interfaces/paginated-response.interface';
+import { Note } from './entities/note.entity';
 
 @Injectable()
 export class NotesService {
@@ -23,7 +26,7 @@ export class NotesService {
     return this.prisma.note.create({ data: { ...noteData, attachmentUrl } });
   }
 
-  async findAll(page: number = 1, limit: number = 10) {
+  async findAll(page: number = 1, limit: number = 10): Promise<PaginatedResponse<Note>> {
     const skip = (page - 1) * limit;
     const [totalItems, items] = await this.prisma.$transaction([
       this.prisma.note.count(),
@@ -33,14 +36,29 @@ export class NotesService {
         take: limit,
       }),
     ]);
+
     if (totalItems === 0) {
-      return [];
+      return {
+        items: [],
+        meta: {
+          page,
+          limit,
+          totalItems: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      };
     }
+
     if (skip >= totalItems) {
       throw new Error('Page number exceeds total items');
     }
 
     const totalPages = Math.ceil(totalItems / limit);
+    const hasNextPage = page < totalPages;
+    const hasPreviousPage = page > 1;
+
     return {
       items,
       meta: {
@@ -48,6 +66,8 @@ export class NotesService {
         limit,
         totalItems,
         totalPages,
+        hasNextPage,
+        hasPreviousPage,
       },
     };
   }
