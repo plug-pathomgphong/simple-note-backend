@@ -1,5 +1,6 @@
-import { PipeTransform, Injectable, BadRequestException } from '@nestjs/common';
+import { PipeTransform, Injectable } from '@nestjs/common';
 import { FileValidationOptions, COMMON_FILE_VALIDATION } from '../../notes/dto/file-upload.dto';
+import { FileSizeExceededException, InvalidFileTypeException, InvalidFileExtensionException } from '../exceptions';
 
 @Injectable()
 export class FileValidationPipe implements PipeTransform {
@@ -12,25 +13,19 @@ export class FileValidationPipe implements PipeTransform {
 
     // Validate file size
     if (this.options.maxFileSize && file.size > this.options.maxFileSize) {
-      throw new BadRequestException(
-        `File size too large. Maximum allowed size is ${this.options.maxFileSize / (1024 * 1024)}MB`
-      );
+      throw new FileSizeExceededException(this.options.maxFileSize, file.size);
     }
 
     // Validate MIME type
     if (this.options.allowedMimeTypes && !this.options.allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException(
-        `Invalid file type. Allowed types: ${this.options.allowedMimeTypes.join(', ')}`
-      );
+      throw new InvalidFileTypeException(this.options.allowedMimeTypes, file.mimetype);
     }
 
     // Validate file extension
     if (this.options.allowedExtensions) {
       const fileExtension = this.getFileExtension(file.originalname);
       if (!this.options.allowedExtensions.includes(fileExtension)) {
-        throw new BadRequestException(
-          `Invalid file extension. Allowed extensions: ${this.options.allowedExtensions.join(', ')}`
-        );
+        throw new InvalidFileExtensionException(this.options.allowedExtensions, fileExtension);
       }
     }
 

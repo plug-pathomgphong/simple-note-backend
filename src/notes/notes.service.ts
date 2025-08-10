@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { PaginatedResponse } from './interfaces/paginated-response.interface';
 import { Note } from './entities/note.entity';
+import { NoteNotFoundException, InvalidPageException } from '../common/exceptions';
 
 @Injectable()
 export class NotesService {
@@ -52,7 +53,7 @@ export class NotesService {
     }
 
     if (skip >= totalItems) {
-      throw new Error('Page number exceeds total items');
+      throw new InvalidPageException(page, totalItems);
     }
 
     const totalPages = Math.ceil(totalItems / limit);
@@ -77,7 +78,7 @@ export class NotesService {
       where: { id },
     });
     if (!note) {
-      throw new Error(`Note with id ${id} not found`);
+      throw new NoteNotFoundException(id);
     }
     return note;
   }
@@ -87,7 +88,7 @@ export class NotesService {
       where: { id },
     });
     if (!existingNote) {
-      throw new Error(`Note with id ${id} not found`);
+      throw new NoteNotFoundException(id);
     }
 
     let attachmentUrl = existingNote.attachmentUrl;
@@ -116,7 +117,7 @@ export class NotesService {
       },
     });
     if (!note) {
-      throw new Error(`Note with id ${id} not found`);
+      throw new NoteNotFoundException(id);
     }
     return note;
   }
@@ -127,7 +128,7 @@ export class NotesService {
       where: { id },
     });
     if (!existingNote) {
-      throw new Error(`Note with id ${id} not found`);
+      throw new NoteNotFoundException(id);
     }
 
     // delete the file from S3 if it exists
