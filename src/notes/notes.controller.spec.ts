@@ -49,10 +49,10 @@ describe('NotesController', () => {
   });
 
   describe('findAll()', () => {
-    it('should call findAll with default pagination', async () => {
+    it('should call findAll with provided pagination dto', async () => {
       mockNotesService.findAll.mockResolvedValue({ items: [], meta: {} });
 
-      const result = await controller.findAll(1, 10);
+      const result = await controller.findAll({ page: 1, limit: 10 });
       expect(service.findAll).toHaveBeenCalledWith(1, 10);
       expect(result).toEqual({ items: [], meta: {} });
     });
