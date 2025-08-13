@@ -6,8 +6,6 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { S3Module } from './s3/s3.module';
 
-import { APP_GUARD } from '@nestjs/core';
-
 @Module({
   imports: [
     NotesModule,

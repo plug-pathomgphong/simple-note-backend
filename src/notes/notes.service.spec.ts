@@ -86,7 +86,7 @@ describe('NotesService', () => {
 
 
   describe('findAll()', () => {
-    it('should return paginated notes', async () => {
+    it('should return paginated notes with extended meta', async () => {
       mockPrisma.$transaction.mockResolvedValue([3, [{ id: 1 }, { id: 2 }]]);
 
       const result = await service.findAll(1, 2);
@@ -99,14 +99,31 @@ describe('NotesService', () => {
           limit: 2,
           totalItems: 3,
           totalPages: 2,
+          hasNextPage: true,
+          hasPreviousPage: false,
         },
       });
     });
 
-    it('should throw error if page is out of range', async () => {
+    it('should return empty paginated response when no items', async () => {
       mockPrisma.$transaction.mockResolvedValue([0, []]);
-      const result = await service.findAll(10, 5);
-      expect(result).toEqual([]);
+      const result = await service.findAll(1, 5);
+      expect(result).toEqual({
+        items: [],
+        meta: {
+          page: 1,
+          limit: 5,
+          totalItems: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      });
+    });
+
+    it('should throw InvalidPageException if page is out of range', async () => {
+      mockPrisma.$transaction.mockResolvedValue([10, Array.from({ length: 5 }, (_, i) => ({ id: i + 1 }))]);
+      await expect(service.findAll(5, 3)).rejects.toThrow('Page number exceeds total items');
     });
   });
 
