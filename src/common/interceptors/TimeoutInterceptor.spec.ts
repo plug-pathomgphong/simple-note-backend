@@ -2,7 +2,6 @@ import { TimeoutInterceptor } from './timeout.interceptor';
 import { RequestTimeoutException } from '@nestjs/common';
 import { TimeoutError, of, throwError as throwRxError } from 'rxjs';
 import { ExecutionContext, CallHandler } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
 
 describe('TimeoutInterceptor', () => {
   let interceptor: TimeoutInterceptor;
