@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import * as crypto from 'crypto';
+import * as bcrypt from 'bcrypt';
 
 export interface JwtPayload {
   sub: number;
@@ -20,16 +20,18 @@ export class AuthService {
   ) {}
 
   async hashPassword(plain: string): Promise<string> {
-    const salt = process.env.PASSWORD_SALT ?? 'dev_salt_change_me';
-    return crypto.pbkdf2Sync(plain, salt, 10000, 64, 'sha512').toString('hex');
+    const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS ?? 10);
+    return bcrypt.hash(plain, saltRounds);
   }
 
   async validateUser(email: string, password: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) return null;
-    const hash = await this.hashPassword(password);
-    if (hash !== user.passwordHash) return null;
-    const { passwordHash, ...safeUser } = user;
+    const isValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isValid) return null;
+    // Exclude passwordHash from returned user object
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { passwordHash: _, ...safeUser } = user;
     return safeUser;
   }
 
@@ -56,7 +58,9 @@ export class AuthService {
       where: { id: payload.sub },
     });
     if (!user) throw new UnauthorizedException();
-    const { passwordHash, ...safeUser } = user;
+    // Exclude passwordHash from returned user object
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { passwordHash: _, ...safeUser } = user;
     return safeUser;
   }
 }
