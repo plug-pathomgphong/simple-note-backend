@@ -5,6 +5,7 @@ import { NotesModule } from './notes/notes.module';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { S3Module } from './s3/s3.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { S3Module } from './s3/s3.module';
     }),
     PrismaModule,
     S3Module,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

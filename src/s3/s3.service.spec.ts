@@ -27,7 +27,6 @@ describe('S3Service', () => {
       S3_SECRET_ACCESS_KEY: 'test-secret-key',
     };
 
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [S3Service],
     }).compile();
@@ -44,7 +43,6 @@ describe('S3Service', () => {
     expect(service).toBeDefined();
   });
 
-
   describe('uploadFile', () => {
     it('should upload file and return URL', async () => {
       mockSend.mockResolvedValueOnce({
@@ -58,7 +56,9 @@ describe('S3Service', () => {
       const url = await service.uploadFile(buffer, key, contentType);
 
       expect(mockSend).toHaveBeenCalledWith(expect.any(PutObjectCommand));
-      expect(url).toContain('https://test-bucket.s3.us-east-1.amazonaws.com/uploads/test.txt');
+      expect(url).toContain(
+        'https://test-bucket.s3.us-east-1.amazonaws.com/uploads/test.txt',
+      );
     });
 
     it('should throw error when upload fails', async () => {
@@ -70,9 +70,9 @@ describe('S3Service', () => {
       const key = 'fail/test.txt';
       const contentType = 'text/plain';
 
-      await expect(service.uploadFile(buffer, key, contentType)).rejects.toThrow(
-        'Failed to upload file to S3',
-      );
+      await expect(
+        service.uploadFile(buffer, key, contentType),
+      ).rejects.toThrow('Failed to upload file to S3');
     });
   });
 
@@ -82,7 +82,9 @@ describe('S3Service', () => {
         $metadata: { httpStatusCode: 204 },
       });
 
-      await expect(service.deleteFile('uploads/test.txt')).resolves.not.toThrow();
+      await expect(
+        service.deleteFile('uploads/test.txt'),
+      ).resolves.not.toThrow();
       expect(mockSend).toHaveBeenCalledWith(expect.any(DeleteObjectCommand));
     });
 

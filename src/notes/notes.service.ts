@@ -6,7 +6,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { PaginatedResponse } from './interfaces/paginated-response.interface';
 import { Note } from './entities/note.entity';
-import { NoteNotFoundException, InvalidPageException } from '../common/exceptions';
+import {
+  NoteNotFoundException,
+  InvalidPageException,
+} from '../common/exceptions';
 
 @Injectable()
 export class NotesService {
@@ -27,7 +30,10 @@ export class NotesService {
     return this.prisma.note.create({ data: { ...noteData, attachmentUrl } });
   }
 
-  async findAll(page: number = 1, limit: number = 10): Promise<PaginatedResponse<Note>> {
+  async findAll(
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<PaginatedResponse<Note>> {
     const skip = (page - 1) * limit;
     const [totalItems, items] = await this.prisma.$transaction([
       this.prisma.note.count(),

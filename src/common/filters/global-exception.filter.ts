@@ -31,12 +31,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       // Handle NestJS HTTP exceptions
       const status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
-      
+
       errorResponse = {
         statusCode: status,
-        message: typeof exceptionResponse === 'string' 
-          ? exceptionResponse 
-          : (exceptionResponse as any).message || exception.message,
+        message:
+          typeof exceptionResponse === 'string'
+            ? exceptionResponse
+            : (exceptionResponse as any).message || exception.message,
         error: exception.name,
         timestamp: new Date().toISOString(),
         path: request.url,

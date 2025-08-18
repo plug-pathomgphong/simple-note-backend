@@ -4,7 +4,11 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { Injectable, Logger } from '@nestjs/common';
-import { S3ConfigurationException, S3UploadException, S3DeleteException } from '../common/exceptions';
+import {
+  S3ConfigurationException,
+  S3UploadException,
+  S3DeleteException,
+} from '../common/exceptions';
 
 @Injectable()
 export class S3Service {
@@ -15,12 +19,16 @@ export class S3Service {
   constructor() {
     this.bucketName = process.env.S3_BUCKET_NAME as string;
     if (!this.bucketName) {
-      throw new S3ConfigurationException('S3_BUCKET_NAME environment variable is not set');
+      throw new S3ConfigurationException(
+        'S3_BUCKET_NAME environment variable is not set',
+      );
     }
 
     const region = process.env.S3_REGION || 'us-east-1';
     if (!region) {
-      throw new S3ConfigurationException('S3_REGION environment variable is not set');
+      throw new S3ConfigurationException(
+        'S3_REGION environment variable is not set',
+      );
     }
 
     this.s3 = new S3Client({
@@ -47,7 +55,10 @@ export class S3Service {
 
       const response = await this.s3.send(new PutObjectCommand(uploadParams));
       if (response.$metadata.httpStatusCode !== 200) {
-        throw new S3UploadException(new Error('S3 response status not 200'), key);
+        throw new S3UploadException(
+          new Error('S3 response status not 200'),
+          key,
+        );
       }
 
       return `https://${this.bucketName}.s3.${process.env.S3_REGION}.amazonaws.com/${key}`;
@@ -70,9 +81,14 @@ export class S3Service {
         Key: fileName,
       };
 
-      const response = await this.s3.send(new DeleteObjectCommand(deleteParams));
+      const response = await this.s3.send(
+        new DeleteObjectCommand(deleteParams),
+      );
       if (response.$metadata.httpStatusCode !== 204) {
-        throw new S3DeleteException(new Error('S3 response status not 204'), fileName);
+        throw new S3DeleteException(
+          new Error('S3 response status not 204'),
+          fileName,
+        );
       }
     } catch (error) {
       this.logger.error(
