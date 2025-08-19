@@ -9,6 +9,8 @@ import {
   UploadedFile,
   UseInterceptors,
   Query,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { NotesService } from './notes.service';
 import { CreateNoteDto } from './dto/create-note.dto';
@@ -18,19 +20,23 @@ import { memoryStorage } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TimeoutInterceptor } from '../common/interceptors/timeout.interceptor';
 import { FileValidationPipe } from '../common/pipes/file-validation.pipe';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('notes')
 export class NotesController {
   constructor(private readonly notesService: NotesService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(new TimeoutInterceptor(3000))
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   create(
     @Body() createNoteDto: CreateNoteDto,
     @UploadedFile(new FileValidationPipe()) file: Express.Multer.File,
+    @Req() req: { user: { id: number } },
   ) {
-    return this.notesService.create(createNoteDto, file);
+    // Assuming req.user contains the user object with id
+    return this.notesService.create(createNoteDto, req.user.id, file);
   }
 
   @Get()
@@ -45,6 +51,7 @@ export class NotesController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(new TimeoutInterceptor(10000))
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   async update(
@@ -56,6 +63,7 @@ export class NotesController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   remove(@Param('id') id: string) {
     return this.notesService.remove(+id);
   }

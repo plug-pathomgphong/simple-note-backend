@@ -17,7 +17,7 @@ export class NotesService {
     private prisma: PrismaService,
     private s3Service: S3Service,
   ) {}
-  async create(noteData: CreateNoteDto, file?: Express.Multer.File) {
+  async create(noteData: CreateNoteDto, userId: number, file?: Express.Multer.File) {
     let attachmentUrl: string | null = null;
     if (file) {
       const fileName = `uploads/${Date.now()}-${file.originalname}`;
@@ -27,7 +27,7 @@ export class NotesService {
         file.mimetype,
       );
     }
-    return this.prisma.note.create({ data: { ...noteData, attachmentUrl } });
+    return this.prisma.note.create({ data: { ...noteData, attachmentUrl, userId } });
   }
 
   async findAll(
