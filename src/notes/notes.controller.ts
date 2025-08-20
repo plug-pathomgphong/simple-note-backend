@@ -21,6 +21,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { TimeoutInterceptor } from '../common/interceptors/timeout.interceptor';
 import { FileValidationPipe } from '../common/pipes/file-validation.pipe';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CacheKey, CacheTTL } from '@nestjs/cache-manager';
 
 @Controller('notes')
 export class NotesController {
@@ -40,6 +41,8 @@ export class NotesController {
   }
 
   @Get()
+  @CacheKey('all-notes') // Custom cache key for this endpoint
+  @CacheTTL(10000) // Cache this endpoint for 60 seconds
   @UseInterceptors(new TimeoutInterceptor(3000))
   async findAll(@Query() paginationDto: PaginationDto) {
     return this.notesService.findAll(paginationDto.page, paginationDto.limit);

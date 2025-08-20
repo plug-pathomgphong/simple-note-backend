@@ -7,9 +7,15 @@ import { PrismaModule } from './prisma/prisma.module';
 import { S3Module } from './s3/s3.module';
 import { AuthModule } from './auth/auth.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
 
 @Module({
   imports: [
+    CacheModule.register({
+      isGlobal: true, // Makes the cache available globally
+      ttl: 5000, // Time to live in seconds
+      max: 100, // Maximum number of items in the cache
+    }),
     NotesModule,
     ConfigModule.forRoot({
       isGlobal: true, // Makes the configuration available globally
@@ -19,23 +25,16 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     AuthModule,
     ThrottlerModule.forRoot([
       {
-        name: 'short',
-        ttl: 1000,
-        limit: 3,
-      },
-      {
-        name: 'medium',
-        ttl: 10000,
-        limit: 20
-      },
-      {
-        name: 'long',
-        ttl: 60000,
-        limit: 100
+        ttl: 60 * 1000, // 60 seconds in milliseconds
+        limit: 100,
       }
     ]),
   ],
   controllers: [AppController],
-  providers: [AppService, { provide: 'APP_GUARD', useClass: ThrottlerGuard }],
+  providers: [
+    AppService, 
+    { provide: 'APP_GUARD', useClass: ThrottlerGuard }, // Global Throttler Guard
+    { provide: 'APP_INTERCEPTOR', useClass: CacheInterceptor }, // Global Cache Manager
+  ],
 })
 export class AppModule {}
