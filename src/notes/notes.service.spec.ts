@@ -30,7 +30,8 @@ describe('NotesService', () => {
       providers: [
         NotesService,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: S3Service, useValue: mockS3 },],
+        { provide: S3Service, useValue: mockS3 },
+      ],
     }).compile();
 
     service = module.get<NotesService>(NotesService);
@@ -43,7 +44,6 @@ describe('NotesService', () => {
     expect(service).toBeDefined();
   });
 
-  
   describe('create()', () => {
     it('should create note with file', async () => {
       const mockFile = {
@@ -53,9 +53,16 @@ describe('NotesService', () => {
       } as Express.Multer.File;
 
       mockS3.uploadFile.mockResolvedValue('https://s3-url/file.txt');
-      mockPrisma.note.create.mockResolvedValue({ id: 1, title: 'Note', attachmentUrl: 'https://s3-url/file.txt' });
+      mockPrisma.note.create.mockResolvedValue({
+        id: 1,
+        title: 'Note',
+        attachmentUrl: 'https://s3-url/file.txt',
+      });
 
-      const result = await service.create({ title: 'Note', content: 'Test' }, mockFile);
+      const result = await service.create(
+        { title: 'Note', content: 'Test' },
+        mockFile,
+      );
 
       expect(s3.uploadFile).toHaveBeenCalled();
       expect(prisma.note.create).toHaveBeenCalledWith({
@@ -65,13 +72,24 @@ describe('NotesService', () => {
           attachmentUrl: 'https://s3-url/file.txt',
         },
       });
-      expect(result).toEqual({ id: 1, title: 'Note', attachmentUrl: 'https://s3-url/file.txt' });
+      expect(result).toEqual({
+        id: 1,
+        title: 'Note',
+        attachmentUrl: 'https://s3-url/file.txt',
+      });
     });
 
     it('should create note without file', async () => {
-      mockPrisma.note.create.mockResolvedValue({ id: 2, title: 'Note 2', attachmentUrl: null });
+      mockPrisma.note.create.mockResolvedValue({
+        id: 2,
+        title: 'Note 2',
+        attachmentUrl: null,
+      });
 
-      const result = await service.create({ title: 'Note 2', content: 'No File' });
+      const result = await service.create({
+        title: 'Note 2',
+        content: 'No File',
+      });
 
       expect(s3.uploadFile).not.toHaveBeenCalled();
       expect(prisma.note.create).toHaveBeenCalledWith({
@@ -83,7 +101,6 @@ describe('NotesService', () => {
       });
     });
   });
-
 
   describe('findAll()', () => {
     it('should return paginated notes with extended meta', async () => {
@@ -122,8 +139,13 @@ describe('NotesService', () => {
     });
 
     it('should throw InvalidPageException if page is out of range', async () => {
-      mockPrisma.$transaction.mockResolvedValue([10, Array.from({ length: 5 }, (_, i) => ({ id: i + 1 }))]);
-      await expect(service.findAll(5, 3)).rejects.toThrow('Page number exceeds total items');
+      mockPrisma.$transaction.mockResolvedValue([
+        10,
+        Array.from({ length: 5 }, (_, i) => ({ id: i + 1 })),
+      ]);
+      await expect(service.findAll(5, 3)).rejects.toThrow(
+        'Page number exceeds total items',
+      );
     });
   });
 
@@ -144,9 +166,16 @@ describe('NotesService', () => {
       mockPrisma.note.findUnique.mockResolvedValue(oldNote);
       mockS3.deleteFile.mockResolvedValue(undefined);
       mockS3.uploadFile.mockResolvedValue('https://s3-url/newfile.txt');
-      mockPrisma.note.update.mockResolvedValue({ ...oldNote, attachmentUrl: 'https://s3-url/newfile.txt' });
+      mockPrisma.note.update.mockResolvedValue({
+        ...oldNote,
+        attachmentUrl: 'https://s3-url/newfile.txt',
+      });
 
-      const result = await service.update(1, { title: 'Updated', content: 'New' }, newFile);
+      const result = await service.update(
+        1,
+        { title: 'Updated', content: 'New' },
+        newFile,
+      );
 
       expect(mockS3.deleteFile).toHaveBeenCalledWith('uploads/oldfile.txt');
       expect(mockS3.uploadFile).toHaveBeenCalled();
@@ -154,7 +183,7 @@ describe('NotesService', () => {
     });
   });
 
-   describe('remove()', () => {
+  describe('remove()', () => {
     it('should delete file and note', async () => {
       const note = {
         id: 1,
@@ -173,7 +202,9 @@ describe('NotesService', () => {
 
     it('should throw if note not found', async () => {
       mockPrisma.note.findUnique.mockResolvedValue(null);
-      await expect(service.remove(1)).rejects.toThrow('Note with id 1 not found');
+      await expect(service.remove(1)).rejects.toThrow(
+        'Note with id 1 not found',
+      );
     });
   });
 });

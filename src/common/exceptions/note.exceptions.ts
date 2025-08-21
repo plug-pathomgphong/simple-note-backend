@@ -34,12 +34,15 @@ export class FileUploadException extends BaseException {
 
 export class FileSizeExceededException extends FileUploadException {
   constructor(maxSize: number, actualSize: number) {
-    super(`File size too large. Maximum allowed size is ${maxSize / (1024 * 1024)}MB`, {
-      maxSizeBytes: maxSize,
-      actualSizeBytes: actualSize,
-      maxSizeMB: maxSize / (1024 * 1024),
-      actualSizeMB: Math.round((actualSize / (1024 * 1024)) * 100) / 100,
-    });
+    super(
+      `File size too large. Maximum allowed size is ${maxSize / (1024 * 1024)}MB`,
+      {
+        maxSizeBytes: maxSize,
+        actualSizeBytes: actualSize,
+        maxSizeMB: maxSize / (1024 * 1024),
+        actualSizeMB: Math.round((actualSize / (1024 * 1024)) * 100) / 100,
+      },
+    );
   }
 }
 
@@ -54,9 +57,12 @@ export class InvalidFileTypeException extends FileUploadException {
 
 export class InvalidFileExtensionException extends FileUploadException {
   constructor(allowedExtensions: string[], actualExtension: string) {
-    super(`Invalid file extension. Allowed extensions: ${allowedExtensions.join(', ')}`, {
-      allowedExtensions,
-      actualExtension,
-    });
+    super(
+      `Invalid file extension. Allowed extensions: ${allowedExtensions.join(', ')}`,
+      {
+        allowedExtensions,
+        actualExtension,
+      },
+    );
   }
 }

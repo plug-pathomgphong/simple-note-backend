@@ -6,7 +6,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { PaginatedResponse } from './interfaces/paginated-response.interface';
 import { Note } from './entities/note.entity';
-import { NoteNotFoundException, InvalidPageException } from '../common/exceptions';
+import {
+  NoteNotFoundException,
+  InvalidPageException,
+} from '../common/exceptions';
 
 @Injectable()
 export class NotesService {
@@ -14,7 +17,7 @@ export class NotesService {
     private prisma: PrismaService,
     private s3Service: S3Service,
   ) {}
-  async create(noteData: CreateNoteDto, file?: Express.Multer.File) {
+  async create(noteData: CreateNoteDto, userId: number, file?: Express.Multer.File) {
     let attachmentUrl: string | null = null;
     if (file) {
       const fileName = `uploads/${Date.now()}-${file.originalname}`;
@@ -24,10 +27,13 @@ export class NotesService {
         file.mimetype,
       );
     }
-    return this.prisma.note.create({ data: { ...noteData, attachmentUrl } });
+    return this.prisma.note.create({ data: { ...noteData, attachmentUrl, userId } });
   }
 
-  async findAll(page: number = 1, limit: number = 10): Promise<PaginatedResponse<Note>> {
+  async findAll(
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<PaginatedResponse<Note>> {
     const skip = (page - 1) * limit;
     const [totalItems, items] = await this.prisma.$transaction([
       this.prisma.note.count(),

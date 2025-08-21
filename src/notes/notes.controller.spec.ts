@@ -19,7 +19,10 @@ describe('NotesController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [NotesController],
-      providers: [NotesService, { provide: NotesService, useValue: mockNotesService }],
+      providers: [
+        NotesService,
+        { provide: NotesService, useValue: mockNotesService },
+      ],
     }).compile();
 
     controller = module.get<NotesController>(NotesController);
@@ -70,7 +73,10 @@ describe('NotesController', () => {
 
   describe('update()', () => {
     it('should call update with id, dto, and file', async () => {
-      const dto: UpdateNoteDto = { title: 'Updated', content: 'Updated content' };
+      const dto: UpdateNoteDto = {
+        title: 'Updated',
+        content: 'Updated content',
+      };
       const file = {
         originalname: 'update.txt',
         buffer: Buffer.from('update'),

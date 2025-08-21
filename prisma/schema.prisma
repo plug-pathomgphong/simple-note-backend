@@ -15,12 +15,24 @@ datasource db {
 }
 
 model Note {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String
+  id            Int      @id @default(autoincrement())
+  title         String
+  content       String
   attachmentUrl String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  userId        Int      @map("user_id") @default(0)
+  user          User     @relation(fields: [userId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([title])
+  @@index([userId])
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  notes        Note[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
