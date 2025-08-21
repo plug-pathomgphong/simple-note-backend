@@ -1,5 +1,9 @@
 import { FileValidationPipe } from './file-validation.pipe';
-import { FileSizeExceededException, InvalidFileTypeException, InvalidFileExtensionException } from '../exceptions';
+import {
+  FileSizeExceededException,
+  InvalidFileTypeException,
+  InvalidFileExtensionException,
+} from '../exceptions';
 import { FileValidationOptions } from '../../notes/dto/file-upload.dto';
 
 describe('FileValidationPipe', () => {
@@ -62,6 +66,8 @@ describe('FileValidationPipe', () => {
       maxFileSize: 1024 * 1024,
     });
 
-    expect(() => customPipe.transform(file)).toThrow(InvalidFileExtensionException);
+    expect(() => customPipe.transform(file)).toThrow(
+      InvalidFileExtensionException,
+    );
   });
 });

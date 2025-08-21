@@ -20,10 +20,7 @@ export interface FileValidationOptions {
 
 // File validation helper for common file types
 export const COMMON_FILE_VALIDATION: FileValidationOptions = {
-  allowedMimeTypes: [
-    'image/jpeg',
-    'image/png',
-  ],
+  allowedMimeTypes: ['image/jpeg', 'image/png'],
   //   'image/gif',
   //   'image/webp',
   //   'application/pdf',
@@ -33,4 +30,3 @@ export const COMMON_FILE_VALIDATION: FileValidationOptions = {
   maxFileSize: 2 * 1024 * 1024, // 2MB
   allowedExtensions: ['.jpg', '.jpeg', '.png'], //'.gif', '.webp', '.pdf', '.txt', '.doc', '.docx'
 };
-

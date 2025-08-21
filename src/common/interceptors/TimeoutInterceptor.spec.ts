@@ -29,7 +29,9 @@ describe('TimeoutInterceptor', () => {
   });
 
   it('should throw RequestTimeoutException on TimeoutError', (done) => {
-    mockCallHandler.handle = jest.fn(() => throwRxError(() => new TimeoutError()));
+    mockCallHandler.handle = jest.fn(() =>
+      throwRxError(() => new TimeoutError()),
+    );
 
     interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
       error: (err) => {
