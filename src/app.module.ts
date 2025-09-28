@@ -27,12 +27,12 @@ import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
       {
         ttl: 60 * 1000, // 60 seconds in milliseconds
         limit: 100,
-      }
+      },
     ]),
   ],
   controllers: [AppController],
   providers: [
-    AppService, 
+    AppService,
     { provide: 'APP_GUARD', useClass: ThrottlerGuard }, // Global Throttler Guard
     { provide: 'APP_INTERCEPTOR', useClass: CacheInterceptor }, // Global Cache Manager
   ],

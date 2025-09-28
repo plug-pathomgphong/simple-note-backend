@@ -18,7 +18,7 @@ export class NotesService {
   constructor(
     private prisma: PrismaService,
     private s3Service: S3Service,
-  ) { }
+  ) {}
 
   private async generateEmbedding(text: string): Promise<number[]> {
     const response = await axios.post(this.endpoint, {
@@ -148,7 +148,6 @@ export class NotesService {
     userId: number,
     file?: Express.Multer.File,
   ) {
-
     const existingNote = await this.prisma.note.findUnique({
       where: { id },
     });
@@ -191,7 +190,6 @@ export class NotesService {
       embedding,
       id,
     );
-
 
     return note;
   }
