@@ -1,0 +1,12 @@
+version: "3.9"
+services:
+  embeddings:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-0.5
+    container_name: embeddings_service
+    ports:
+      - "8080:80"
+    environment:
+      MODEL_ID: sentence-transformers/all-MiniLM-L6-v2
+      HF_HUB_CACHE: /data
+    volumes:
+      - ./hf-cache:/data

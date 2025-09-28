@@ -1,7 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
-import { PaginationDto } from './dto/pagination.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { PaginatedResponse } from './interfaces/paginated-response.interface';
@@ -10,14 +9,53 @@ import {
   NoteNotFoundException,
   InvalidPageException,
 } from '../common/exceptions';
+import axios from 'axios';
 
 @Injectable()
 export class NotesService {
+  private readonly endpoint = 'http://localhost:8080/embed';
+
   constructor(
     private prisma: PrismaService,
     private s3Service: S3Service,
   ) {}
-  async create(noteData: CreateNoteDto, userId: number, file?: Express.Multer.File) {
+
+  private async generateEmbedding(text: string): Promise<number[]> {
+    const response = await axios.post(this.endpoint, {
+      inputs: text,
+    });
+
+    if (!response.data || response.data.length === 0) {
+      throw new Error('Embedding API returned empty result');
+    }
+    return response.data[0];
+  }
+
+  async searchNotes(query: string, limit: number = 10): Promise<Note[]> {
+    console.log('Searching for notes with query:', query);
+    console.log('Generating embedding for limit:', limit);
+    const embedding = await this.generateEmbedding(query);
+    console.log('Embedding:', embedding);
+
+    return this.prisma.$queryRawUnsafe<any[]>(
+      `
+      SELECT id, title, content, (1 - (embedding <=> $1::vector)) AS similarity
+        FROM "Note"
+        ORDER BY similarity DESC
+        LIMIT $2;
+      `,
+      embedding,
+      limit,
+    );
+  }
+
+  async create(
+    noteData: CreateNoteDto,
+    userId: number,
+    file?: Express.Multer.File,
+  ) {
+    const embedding = await this.generateEmbedding(noteData.content);
+
     let attachmentUrl: string | null = null;
     if (file) {
       const fileName = `uploads/${Date.now()}-${file.originalname}`;
@@ -27,7 +65,22 @@ export class NotesService {
         file.mimetype,
       );
     }
-    return this.prisma.note.create({ data: { ...noteData, attachmentUrl, userId } });
+    console.log('Attachment URL:', attachmentUrl);
+
+    const note = await this.prisma.$queryRawUnsafe(
+      `
+      INSERT INTO "Note" (title, content, attachment_url, user_id, embedding, "updatedAt")
+      VALUES ($1, $2, $3, $4, $5, NOW())
+      RETURNING id, title, content, attachment_url, user_id;
+      `,
+      noteData.title,
+      noteData.content,
+      attachmentUrl,
+      userId,
+      embedding,
+    );
+
+    return note;
   }
 
   async findAll(
@@ -89,23 +142,33 @@ export class NotesService {
     return note;
   }
 
-  async update(id: number, data: UpdateNoteDto, file?: Express.Multer.File) {
+  async update(
+    id: number,
+    data: UpdateNoteDto,
+    userId: number,
+    file?: Express.Multer.File,
+  ) {
     const existingNote = await this.prisma.note.findUnique({
       where: { id },
     });
+
     if (!existingNote) {
       throw new NoteNotFoundException(id);
     }
 
+    if (existingNote.userId !== userId) {
+      throw new ForbiddenException('You are not allowed to update this note');
+    }
+
+    const embedding = await this.generateEmbedding(data.content as string);
+
     let attachmentUrl = existingNote.attachmentUrl;
     if (file) {
       if (existingNote.attachmentUrl) {
-        // If the note already has an attachment, delete it from S3
         const fileName = existingNote.attachmentUrl.split('/').pop();
         await this.s3Service.deleteFile(`uploads/${fileName}`);
       }
 
-      // If a new file is provided, upload it to S3
       const fileName = `uploads/${Date.now()}-${file.originalname}`;
       attachmentUrl = await this.s3Service.uploadFile(
         file.buffer,
@@ -114,22 +177,24 @@ export class NotesService {
       );
     }
 
-    const note = await this.prisma.note.update({
-      where: { id },
-      data: {
-        title: data.title,
-        content: data.content,
-        attachmentUrl,
-      },
-    });
-    if (!note) {
-      throw new NoteNotFoundException(id);
-    }
+    const note = await this.prisma.$queryRawUnsafe<Note>(
+      `
+      UPDATE "Note"
+      SET title = $1, content = $2, attachment_url = $3, embedding = $4
+      WHERE id = $5
+      RETURNING id, title, content, attachment_url, user_id;
+      `,
+      data.title,
+      data.content,
+      attachmentUrl,
+      embedding,
+      id,
+    );
+
     return note;
   }
 
-  async remove(id: number) {
-    // Ensure the note exists before attempting to delete
+  async remove(id: number, userId: number) {
     const existingNote = await this.prisma.note.findUnique({
       where: { id },
     });
@@ -137,14 +202,14 @@ export class NotesService {
       throw new NoteNotFoundException(id);
     }
 
-    // delete the file from S3 if it exists
+    if (existingNote.userId !== userId) {
+      throw new ForbiddenException('You are not allowed to delete this note');
+    }
+
     if (existingNote.attachmentUrl) {
       const fileName = existingNote.attachmentUrl.split('/').pop();
       await this.s3Service.deleteFile(`uploads/${fileName}`);
     }
-
-    // Delete the note
-    // Note: The Prisma client does not return the deleted record by default.
 
     return this.prisma.note.delete({ where: { id } });
   }

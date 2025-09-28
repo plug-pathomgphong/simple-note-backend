@@ -40,6 +40,14 @@ export class NotesController {
     return this.notesService.create(createNoteDto, req.user.id, file);
   }
 
+  @Post('search')
+  async search(@Body() searchDto: { query: string; limit?: number }) {
+    return await this.notesService.searchNotes(
+      searchDto.query,
+      searchDto.limit,
+    );
+  }
+
   @Get()
   @CacheKey('all-notes') // Custom cache key for this endpoint
   @CacheTTL(10000) // Cache this endpoint for 60 seconds
@@ -61,13 +69,14 @@ export class NotesController {
     @Param('id') id: string,
     @Body() updateNoteDto: UpdateNoteDto,
     @UploadedFile(new FileValidationPipe()) file: Express.Multer.File,
+    @Req() req: { user: { id: number } },
   ) {
-    return this.notesService.update(+id, updateNoteDto, file);
+    return this.notesService.update(+id, updateNoteDto, req.user.id, file);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  remove(@Param('id') id: string) {
-    return this.notesService.remove(+id);
+  remove(@Param('id') id: string, @Req() req: { user: { id: number } }) {
+    return this.notesService.remove(+id, req.user.id);
   }
 }
