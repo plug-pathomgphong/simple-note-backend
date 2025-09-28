@@ -2,11 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotesService } from './notes.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
+import axios from 'axios';
+
+// Mock axios
+jest.mock('axios');
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('NotesService', () => {
   let service: NotesService;
-  let prisma: PrismaService;
-  let s3: S3Service;
 
   const mockPrisma = {
     note: {
@@ -18,6 +21,7 @@ describe('NotesService', () => {
       count: jest.fn(),
     },
     $transaction: jest.fn(),
+    $queryRawUnsafe: jest.fn(),
   };
 
   const mockS3 = {
@@ -35,9 +39,12 @@ describe('NotesService', () => {
     }).compile();
 
     service = module.get<NotesService>(NotesService);
-    prisma = module.get<PrismaService>(PrismaService);
-    s3 = module.get<S3Service>(S3Service);
     jest.clearAllMocks();
+
+    // Mock axios response for embedding generation
+    mockedAxios.post.mockResolvedValue({
+      data: [[0.1, 0.2, 0.3, 0.4, 0.5]],
+    });
   });
 
   it('should be defined', () => {
@@ -53,52 +60,95 @@ describe('NotesService', () => {
       } as Express.Multer.File;
 
       mockS3.uploadFile.mockResolvedValue('https://s3-url/file.txt');
-      mockPrisma.note.create.mockResolvedValue({
-        id: 1,
-        title: 'Note',
-        attachmentUrl: 'https://s3-url/file.txt',
-      });
+      mockPrisma.$queryRawUnsafe.mockResolvedValue([
+        {
+          id: 1,
+          title: 'Note',
+          content: 'Test',
+          attachment_url: 'https://s3-url/file.txt',
+          user_id: 1,
+        },
+      ]);
 
       const result = await service.create(
         { title: 'Note', content: 'Test' },
+        1,
         mockFile,
       );
 
-      expect(s3.uploadFile).toHaveBeenCalled();
-      expect(prisma.note.create).toHaveBeenCalledWith({
-        data: {
+      expect(mockedAxios.post).toHaveBeenCalledWith(
+        'http://localhost:8080/embed',
+        {
+          inputs: 'Test',
+        },
+      );
+      expect(mockS3.uploadFile).toHaveBeenCalledWith(
+        mockFile.buffer,
+        expect.stringMatching(/uploads\/\d+-file\.txt/),
+        'text/plain',
+      );
+      expect(mockPrisma.$queryRawUnsafe).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO'),
+        'Note',
+        'Test',
+        'https://s3-url/file.txt',
+        1,
+        [0.1, 0.2, 0.3, 0.4, 0.5],
+      );
+      expect(result).toEqual([
+        {
+          id: 1,
           title: 'Note',
           content: 'Test',
-          attachmentUrl: 'https://s3-url/file.txt',
+          attachment_url: 'https://s3-url/file.txt',
+          user_id: 1,
         },
-      });
-      expect(result).toEqual({
-        id: 1,
-        title: 'Note',
-        attachmentUrl: 'https://s3-url/file.txt',
-      });
+      ]);
     });
 
     it('should create note without file', async () => {
-      mockPrisma.note.create.mockResolvedValue({
-        id: 2,
-        title: 'Note 2',
-        attachmentUrl: null,
-      });
-
-      const result = await service.create({
-        title: 'Note 2',
-        content: 'No File',
-      });
-
-      expect(s3.uploadFile).not.toHaveBeenCalled();
-      expect(prisma.note.create).toHaveBeenCalledWith({
-        data: {
+      mockPrisma.$queryRawUnsafe.mockResolvedValue([
+        {
+          id: 2,
           title: 'Note 2',
           content: 'No File',
-          attachmentUrl: null,
+          attachment_url: null,
+          user_id: 1,
         },
-      });
+      ]);
+
+      const result = await service.create(
+        {
+          title: 'Note 2',
+          content: 'No File',
+        },
+        1,
+      );
+
+      expect(mockedAxios.post).toHaveBeenCalledWith(
+        'http://localhost:8080/embed',
+        {
+          inputs: 'No File',
+        },
+      );
+      expect(mockS3.uploadFile).not.toHaveBeenCalled();
+      expect(mockPrisma.$queryRawUnsafe).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO'),
+        'Note 2',
+        'No File',
+        null,
+        1,
+        [0.1, 0.2, 0.3, 0.4, 0.5],
+      );
+      expect(result).toEqual([
+        {
+          id: 2,
+          title: 'Note 2',
+          content: 'No File',
+          attachment_url: null,
+          user_id: 1,
+        },
+      ]);
     });
   });
 
@@ -149,6 +199,79 @@ describe('NotesService', () => {
     });
   });
 
+  describe('searchNotes()', () => {
+    it('should search notes with query and limit', async () => {
+      const mockNotes = [
+        { id: 1, title: 'Note 1', content: 'Content 1', similarity: 0.95 },
+        { id: 2, title: 'Note 2', content: 'Content 2', similarity: 0.87 },
+      ];
+
+      mockPrisma.$queryRawUnsafe.mockResolvedValue(mockNotes);
+
+      const result = await service.searchNotes('test query', 5);
+
+      expect(mockedAxios.post).toHaveBeenCalledWith(
+        'http://localhost:8080/embed',
+        {
+          inputs: 'test query',
+        },
+      );
+      expect(mockPrisma.$queryRawUnsafe).toHaveBeenCalledWith(
+        expect.stringContaining('SELECT id, title, content'),
+        [0.1, 0.2, 0.3, 0.4, 0.5],
+        5,
+      );
+      expect(result).toEqual(mockNotes);
+    });
+
+    it('should search notes with default limit', async () => {
+      const mockNotes = [
+        { id: 1, title: 'Note 1', content: 'Content 1', similarity: 0.95 },
+      ];
+
+      mockPrisma.$queryRawUnsafe.mockResolvedValue(mockNotes);
+
+      const result = await service.searchNotes('test query');
+
+      expect(mockPrisma.$queryRawUnsafe).toHaveBeenCalledWith(
+        expect.stringContaining('SELECT id, title, content'),
+        [0.1, 0.2, 0.3, 0.4, 0.5],
+        10, // Default limit
+      );
+      expect(result).toEqual(mockNotes);
+    });
+
+    it('should throw error if embedding API returns empty result', async () => {
+      mockedAxios.post.mockResolvedValue({ data: [] });
+
+      await expect(service.searchNotes('test query')).rejects.toThrow(
+        'Embedding API returned empty result',
+      );
+    });
+  });
+
+  describe('findOne()', () => {
+    it('should return note when found', async () => {
+      const mockNote = { id: 1, title: 'Test Note', content: 'Test Content' };
+      mockPrisma.note.findUnique.mockResolvedValue(mockNote);
+
+      const result = await service.findOne(1);
+
+      expect(mockPrisma.note.findUnique).toHaveBeenCalledWith({
+        where: { id: 1 },
+      });
+      expect(result).toEqual(mockNote);
+    });
+
+    it('should throw NoteNotFoundException when note not found', async () => {
+      mockPrisma.note.findUnique.mockResolvedValue(null);
+
+      await expect(service.findOne(1)).rejects.toThrow(
+        'Note with id 1 not found',
+      );
+    });
+  });
+
   describe('update()', () => {
     it('should update note with new file and delete old', async () => {
       const oldNote = {
@@ -156,6 +279,7 @@ describe('NotesService', () => {
         title: 'Old',
         content: 'Content',
         attachmentUrl: 'https://s3.amazonaws.com/uploads/oldfile.txt',
+        userId: 1,
       };
       const newFile = {
         originalname: 'new.txt',
@@ -166,20 +290,73 @@ describe('NotesService', () => {
       mockPrisma.note.findUnique.mockResolvedValue(oldNote);
       mockS3.deleteFile.mockResolvedValue(undefined);
       mockS3.uploadFile.mockResolvedValue('https://s3-url/newfile.txt');
-      mockPrisma.note.update.mockResolvedValue({
-        ...oldNote,
-        attachmentUrl: 'https://s3-url/newfile.txt',
-      });
+      mockPrisma.$queryRawUnsafe.mockResolvedValue([
+        {
+          id: 1,
+          title: 'Updated',
+          content: 'New',
+          attachment_url: 'https://s3-url/newfile.txt',
+          user_id: 1,
+        },
+      ]);
 
       const result = await service.update(
         1,
         { title: 'Updated', content: 'New' },
+        1,
         newFile,
       );
 
+      expect(mockPrisma.note.findUnique).toHaveBeenCalledWith({
+        where: { id: 1 },
+      });
       expect(mockS3.deleteFile).toHaveBeenCalledWith('uploads/oldfile.txt');
-      expect(mockS3.uploadFile).toHaveBeenCalled();
-      expect(result.attachmentUrl).toBe('https://s3-url/newfile.txt');
+      expect(mockS3.uploadFile).toHaveBeenCalledWith(
+        newFile.buffer,
+        expect.stringMatching(/uploads\/\d+-new\.txt/),
+        'text/plain',
+      );
+      expect(mockPrisma.$queryRawUnsafe).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE'),
+        'Updated',
+        'New',
+        'https://s3-url/newfile.txt',
+        [0.1, 0.2, 0.3, 0.4, 0.5],
+        1,
+      );
+      expect(result).toEqual([
+        {
+          id: 1,
+          title: 'Updated',
+          content: 'New',
+          attachment_url: 'https://s3-url/newfile.txt',
+          user_id: 1,
+        },
+      ]);
+    });
+
+    it('should throw ForbiddenException if user is not owner', async () => {
+      const oldNote = {
+        id: 1,
+        title: 'Old',
+        content: 'Content',
+        attachmentUrl: null,
+        userId: 2, // Different user
+      };
+
+      mockPrisma.note.findUnique.mockResolvedValue(oldNote);
+
+      await expect(
+        service.update(1, { title: 'Updated', content: 'New' }, 1),
+      ).rejects.toThrow('You are not allowed to update this note');
+    });
+
+    it('should throw NoteNotFoundException if note not found', async () => {
+      mockPrisma.note.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.update(1, { title: 'Updated', content: 'New' }, 1),
+      ).rejects.toThrow('Note with id 1 not found');
     });
   });
 
@@ -188,13 +365,17 @@ describe('NotesService', () => {
       const note = {
         id: 1,
         attachmentUrl: 'https://s3.amazonaws.com/uploads/file.txt',
+        userId: 1,
       };
       mockPrisma.note.findUnique.mockResolvedValue(note);
       mockS3.deleteFile.mockResolvedValue(undefined);
       mockPrisma.note.delete.mockResolvedValue({ id: 1 });
 
-      const result = await service.remove(1);
+      const result = await service.remove(1, 1);
 
+      expect(mockPrisma.note.findUnique).toHaveBeenCalledWith({
+        where: { id: 1 },
+      });
       expect(mockS3.deleteFile).toHaveBeenCalledWith('uploads/file.txt');
       expect(mockPrisma.note.delete).toHaveBeenCalledWith({ where: { id: 1 } });
       expect(result).toEqual({ id: 1 });
@@ -202,8 +383,21 @@ describe('NotesService', () => {
 
     it('should throw if note not found', async () => {
       mockPrisma.note.findUnique.mockResolvedValue(null);
-      await expect(service.remove(1)).rejects.toThrow(
+      await expect(service.remove(1, 1)).rejects.toThrow(
         'Note with id 1 not found',
+      );
+    });
+
+    it('should throw ForbiddenException if user is not owner', async () => {
+      const note = {
+        id: 1,
+        attachmentUrl: null,
+        userId: 2, // Different user
+      };
+      mockPrisma.note.findUnique.mockResolvedValue(note);
+
+      await expect(service.remove(1, 1)).rejects.toThrow(
+        'You are not allowed to delete this note',
       );
     });
   });
