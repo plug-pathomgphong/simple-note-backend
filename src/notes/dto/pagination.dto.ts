@@ -1,4 +1,4 @@
-import { IsOptional, IsInt, Min, Max } from 'class-validator';
+import { IsOptional, IsInt, Min, Max, IsString } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class PaginationDto {
@@ -15,4 +15,8 @@ export class PaginationDto {
   @Min(1, { message: 'Limit must be at least 1' })
   @Max(100, { message: 'Limit must not exceed 100' })
   limit?: number = 10;
+
+  @IsOptional()
+  @IsString({ message: 'Search must be a string' })
+  search?: string;
 }

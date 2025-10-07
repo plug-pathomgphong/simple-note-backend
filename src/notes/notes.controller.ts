@@ -53,7 +53,7 @@ export class NotesController {
   @CacheTTL(10000) // Cache this endpoint for 60 seconds
   @UseInterceptors(new TimeoutInterceptor(3000))
   async findAll(@Query() paginationDto: PaginationDto) {
-    return this.notesService.findAll(paginationDto.page, paginationDto.limit);
+    return this.notesService.findAll(paginationDto.page, paginationDto.limit, paginationDto.search);
   }
 
   @Get(':id')

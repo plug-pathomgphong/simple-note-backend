@@ -18,7 +18,7 @@ export class NotesService {
   constructor(
     private prisma: PrismaService,
     private s3Service: S3Service,
-  ) {}
+  ) { }
 
   private async generateEmbedding(text: string): Promise<number[]> {
     const response = await axios.post(this.endpoint, {
@@ -31,23 +31,6 @@ export class NotesService {
     return response.data[0];
   }
 
-  async searchNotes(query: string, limit: number = 10): Promise<Note[]> {
-    console.log('Searching for notes with query:', query);
-    console.log('Generating embedding for limit:', limit);
-    const embedding = await this.generateEmbedding(query);
-    console.log('Embedding:', embedding);
-
-    return this.prisma.$queryRawUnsafe<any[]>(
-      `
-      SELECT id, title, content, (1 - (embedding <=> $1::vector)) AS similarity
-        FROM "Note"
-        ORDER BY similarity DESC
-        LIMIT $2;
-      `,
-      embedding,
-      limit,
-    );
-  }
 
   async create(
     noteData: CreateNoteDto,
@@ -83,20 +66,66 @@ export class NotesService {
     return note;
   }
 
+
+  async searchNotes(query: string, limit: number = 10): Promise<Note[]> {
+    const embedding = await this.generateEmbedding(query);
+    console.log('Embedding:', embedding);
+
+    return this.prisma.$queryRawUnsafe<any[]>(
+      `
+      SELECT id, title, content, (1 - (embedding <=> $1::vector)) AS similarity
+        FROM "Note"
+        ORDER BY similarity DESC
+        LIMIT $2;
+      `,
+      embedding,
+      limit,
+    );
+  }
+
   async findAll(
     page: number = 1,
     limit: number = 10,
+    search?: string,
   ): Promise<PaginatedResponse<Note>> {
     const skip = (page - 1) * limit;
-    const [totalItems, items] = await this.prisma.$transaction([
-      this.prisma.note.count(),
-      this.prisma.note.findMany({
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-    ]);
 
+    let items: Note[] = [];
+    let totalItems = 0;
+
+    if (search) {
+      // 🔎 Semantic Search ด้วย Embedding
+      const embedding = await this.generateEmbedding(search);
+
+      // หา items ด้วย vector search
+      items = await this.prisma.$queryRawUnsafe<Note[]>(
+        `
+      SELECT id, title, content, (1 - (embedding <=> $1::vector)) AS similarity
+      FROM "Note"
+      ORDER BY similarity DESC
+      LIMIT $2
+      OFFSET $3
+      `,
+        embedding,
+        limit,
+        skip,
+      );
+
+      // นับจำนวนทั้งหมด (อาจทำ full-text/vector count ก็ได้)
+      totalItems = await this.prisma.note.count();
+    } else {
+      // 📑 Pagination ปกติ
+      [totalItems, items] = await this.prisma.$transaction([
+        this.prisma.note.count(),
+        this.prisma.note.findMany({
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+        }),
+      ]);
+    }
+
+    // ✅ handle empty result
     if (totalItems === 0) {
       return {
         items: [],
@@ -107,17 +136,18 @@ export class NotesService {
           totalPages: 0,
           hasNextPage: false,
           hasPreviousPage: false,
+          search,
         },
       };
     }
 
+    // ✅ validate page number
     if (skip >= totalItems) {
       throw new InvalidPageException(page, totalItems);
     }
 
+    // ✅ pagination metadata
     const totalPages = Math.ceil(totalItems / limit);
-    const hasNextPage = page < totalPages;
-    const hasPreviousPage = page > 1;
 
     return {
       items,
@@ -126,8 +156,9 @@ export class NotesService {
         limit,
         totalItems,
         totalPages,
-        hasNextPage,
-        hasPreviousPage,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+        search,
       },
     };
   }
