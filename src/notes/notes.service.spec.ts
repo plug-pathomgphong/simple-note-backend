@@ -168,6 +168,7 @@ describe('NotesService', () => {
           totalPages: 2,
           hasNextPage: true,
           hasPreviousPage: false,
+          search: undefined,
         },
       });
     });
@@ -184,6 +185,7 @@ describe('NotesService', () => {
           totalPages: 0,
           hasNextPage: false,
           hasPreviousPage: false,
+          search: undefined,
         },
       });
     });
@@ -196,6 +198,98 @@ describe('NotesService', () => {
       await expect(service.findAll(5, 3)).rejects.toThrow(
         'Page number exceeds total items',
       );
+    });
+
+    it('should perform semantic search when search parameter is provided', async () => {
+      const mockSearchResults = [
+        { id: 1, title: 'Note 1', content: 'Content 1', similarity: 0.95 },
+        { id: 2, title: 'Note 2', content: 'Content 2', similarity: 0.87 },
+      ];
+      
+      mockPrisma.$queryRawUnsafe.mockResolvedValue(mockSearchResults);
+      mockPrisma.note.count.mockResolvedValue(2);
+
+      const result = await service.findAll(1, 10, 'test search');
+
+      expect(mockedAxios.post).toHaveBeenCalledWith(
+        'http://localhost:8080/embed',
+        {
+          inputs: 'test search',
+        },
+      );
+      expect(mockPrisma.$queryRawUnsafe).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'SELECT id, title, content, (1 - (embedding <=> $1::vector)) AS similarity',
+        ),
+        [0.1, 0.2, 0.3, 0.4, 0.5],
+        10,
+        0,
+      );
+      expect(mockPrisma.note.count).toHaveBeenCalled();
+      expect(result).toEqual({
+        items: mockSearchResults,
+        meta: {
+          page: 1,
+          limit: 10,
+          totalItems: 2,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+          search: 'test search',
+        },
+      });
+    });
+
+    it('should handle semantic search with pagination', async () => {
+      const mockSearchResults = [
+        { id: 3, title: 'Note 3', content: 'Content 3', similarity: 0.75 },
+      ];
+      
+      mockPrisma.$queryRawUnsafe.mockResolvedValue(mockSearchResults);
+      mockPrisma.note.count.mockResolvedValue(5);
+
+      const result = await service.findAll(2, 2, 'test search');
+
+      expect(mockPrisma.$queryRawUnsafe).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'SELECT id, title, content, (1 - (embedding <=> $1::vector)) AS similarity',
+        ),
+        [0.1, 0.2, 0.3, 0.4, 0.5],
+        2,
+        2, // skip = (page - 1) * limit = (2 - 1) * 2 = 2
+      );
+      expect(result).toEqual({
+        items: mockSearchResults,
+        meta: {
+          page: 2,
+          limit: 2,
+          totalItems: 5,
+          totalPages: 3,
+          hasNextPage: true,
+          hasPreviousPage: true,
+          search: 'test search',
+        },
+      });
+    });
+
+    it('should return empty result for semantic search when no items found', async () => {
+      mockPrisma.$queryRawUnsafe.mockResolvedValue([]);
+      mockPrisma.note.count.mockResolvedValue(0);
+
+      const result = await service.findAll(1, 10, 'nonexistent search');
+
+      expect(result).toEqual({
+        items: [],
+        meta: {
+          page: 1,
+          limit: 10,
+          totalItems: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+          search: 'nonexistent search',
+        },
+      });
     });
   });
 

@@ -56,7 +56,7 @@ describe('NotesController', () => {
       mockNotesService.findAll.mockResolvedValue({ items: [], meta: {} });
 
       const result = await controller.findAll({ page: 1, limit: 10 });
-      expect(mockNotesService.findAll).toHaveBeenCalledWith(1, 10);
+      expect(mockNotesService.findAll).toHaveBeenCalledWith(1, 10, undefined);
       expect(result).toEqual({ items: [], meta: {} });
     });
   });
